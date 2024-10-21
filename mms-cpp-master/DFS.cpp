@@ -32,27 +32,27 @@ void addlist(list *&_list, int x, int y) //thêm tọa độ vào danh sách
         _list = newNode;
     }
 }
-void deletepath(list *&_path) //xóa tọa độ sai trong lộ trình (path)
+list *deletepath(list *_path) //xóa tọa độ sai trong lộ trình (path)
 {
     list*todelete = _path;
     _path = _path->next;
     delete(todelete);
-    return;
+    return _path;
 }
 
-bool check(int x, int y, list *visit) // kiểm tra xem ô đã được thăm chưa
+int check(int x, int y, list *visit) // kiểm tra xem ô đã được thăm chưa
 {
     list *check = visit;
     while (check !=nullptr)
     {
         if(check->x == x && check->y == y)
         {
-            return true;
+            return 0;
         }
         else 
         check = check->next;
     }
-    return false;
+    return 1;
 }
 static int direct = 1;
 void logList(const list* lst, const std::string& listName) {
@@ -75,6 +75,7 @@ void BT(list *&_path,list *_visit,int *x, int *y) // hàm đệ quy backtracking
     }
     list *previous = current->next;
     // Thực hiện quay về điểm trước đó dựa theo tọa độ hiện tại, tọa độ trước đó, hướng hiện tại
+    API::setColor(*x,*y,'R'); //tô đỏ các ô sai
     if (direct == 1) // Đang hướng Bắc (north)
     {
         if (current->x < previous->x) // Quay phải để sang Đông
@@ -195,25 +196,27 @@ void BT(list *&_path,list *_visit,int *x, int *y) // hàm đệ quy backtracking
             *y = *y + 1;
         }
     }
-    _path = _path->next;
     delete(current);
-
-    //kiểm tra các ô phía trước, trái, phải ô vừa backtrack, nếu có ô trống, thực hiện gọi dfs
+    _path = deletepath(_path);
+    logList(_path, "newPath");
+    log("searching for available way");
+    //kiểm tra các ô phía trước, trái, phải ô vừa backtrack, nếu có ô chưa thăm, thực hiện gọi dfs
     if (direct == 1)
     {
         if (!API::wallFront()) 
         {
-            if (!check(*x, *y + 1, _visit))
+            if (check(*x, *y + 1, _visit))
             {
                 API::moveForward();
                 *y = *y + 1;
                 log("go straight");
                 DFS(_path, _visit, x, y);
             }
+            log("way not found");
         }
         else if (!API::wallLeft()) // rẽ trái đổi direct
         {
-            if (!check(*x- 1, *y, _visit))
+            if (check(*x- 1, *y, _visit))
             {
                 API::turnLeft();
                 direct = 4;
@@ -222,19 +225,21 @@ void BT(list *&_path,list *_visit,int *x, int *y) // hàm đệ quy backtracking
                 log("go left");
                 DFS(_path, _visit, x, y);
             }
+            log("way not found");
         }
         else if (!API::wallRight())
         {
-            if (!check(*x + 1, *y, _visit))
+            if (check(*x + 1, *y, _visit))
             {
-                API::wallRight();
+                API::turnRight();
                 direct = 2;
                 API::moveForward();
                 *x = *x + 1;
                 log("go right");
                 DFS(_path, _visit, x, y);
             }
-        }
+            log("way not found");
+        }   
         else 
         {
             BT(_path,_visit, x,y);
@@ -244,17 +249,18 @@ void BT(list *&_path,list *_visit,int *x, int *y) // hàm đệ quy backtracking
     {
         if (!API::wallFront()) // đi thẳng không đổi direct
         {
-            if (!check(*x + 1, *y, _visit))
+            if (check(*x + 1, *y, _visit))
             {
                 API::moveForward();
                 *x = *x + 1;
                 log("go straight");
                 DFS(_path, _visit, x, y);
             }
+            log("way not found");
         }
         else if (!API::wallLeft()) // rẽ trái đổi direct
         {
-            if (!check(*x, *y + 1, _visit))
+            if (check(*x, *y + 1, _visit))
             {
                 API::turnLeft();
                 direct = 1;
@@ -263,18 +269,20 @@ void BT(list *&_path,list *_visit,int *x, int *y) // hàm đệ quy backtracking
                 log("go left");
                 DFS(_path, _visit, x, y);
             }
+            log("way not found");
         }
         else if (!API::wallRight())
         {
-            if (!check(*x, *y - 1,_visit))
+            if (check(*x, *y - 1,_visit))
             {
-                API::wallRight();
+                API::turnRight();
                 direct = 3;
                 API::moveForward();
                 *y = *y - 1;
                 log("go right");
                 DFS(_path, _visit, x, y);
             }
+            log("way not found");
         }
         else
         {
@@ -286,17 +294,18 @@ void BT(list *&_path,list *_visit,int *x, int *y) // hàm đệ quy backtracking
     {
         if (!API::wallFront()) // đi thẳng không đổi direct
         {
-            if (!check(*x, *y - 1,_visit))
+            if (check(*x, *y - 1,_visit))
             {
                 API::moveForward();
                 *y = *y - 1;
                 log("go straight");
                 DFS(_path, _visit, x, y);
             }
+            log("way not found");
         }
         else if (!API::wallLeft()) // rẽ trái đổi direct
         {
-            if (!check(*x + 1, *y, _visit))
+            if (check(*x + 1, *y, _visit))
             {
                 API::turnLeft();
                 direct = 2;
@@ -305,18 +314,20 @@ void BT(list *&_path,list *_visit,int *x, int *y) // hàm đệ quy backtracking
                 log("go left");
                 DFS(_path, _visit, x, y);
             }
+            log("way not found");
         }
         else if (!API::wallRight())
         {
-            if (!check(*x + 1, *y, _visit))
+            if (check(*x + 1, *y, _visit))
             {
-                API::wallRight();
+                API::turnRight();
                 direct = 4;
                 API::moveForward();
                 *x = *x - 1;
                 log("go right");
                 DFS(_path, _visit,x, y);
             }
+            log("way not found");
         }
         else
         {
@@ -327,17 +338,18 @@ void BT(list *&_path,list *_visit,int *x, int *y) // hàm đệ quy backtracking
     {
         if (!API::wallFront()) // đi thẳng không đổi direct
         {
-            if (!check(*x- 1, *y, _visit))
+            if (check(*x- 1, *y, _visit))
             {
                 API::moveForward();
                 *x = *x - 1;
                 log("go straight");
                 DFS(_path, _visit,x, y);
             }
+            log("way not found");
         }
         else if (!API::wallLeft()) // rẽ trái đổi direct
         {
-            if (!check(*x, *y - 1, _visit))
+            if (check(*x, *y - 1, _visit))
             {
                 API::turnLeft();
                 direct = 3;
@@ -346,18 +358,20 @@ void BT(list *&_path,list *_visit,int *x, int *y) // hàm đệ quy backtracking
                 log("go left");
                 DFS(_path, _visit, x, y);
             }
+            log("way not found");
         }
         else if (!API::wallRight())
         {
-            if (!check(*x, *y + 1, _visit))
+            if (check(*x, *y + 1, _visit))
             {
-                API::wallRight();
+                API::turnRight();
                 direct = 1;
                 API::moveForward();
                 *y = *y + 1;
                 log("go right");
-                DFS(_path, _visit, x, &*y);
+                DFS(_path, _visit, x, y);
             }
+            log("way not found");
         }
         else
         {
@@ -365,7 +379,7 @@ void BT(list *&_path,list *_visit,int *x, int *y) // hàm đệ quy backtracking
         }
     }
 
-
+    BT(_path,_visit,x,y);
 
 }
 void DFS(list *&_path, list *&_visit, int *x, int *y) // hàm đệ quy DFS
@@ -374,14 +388,14 @@ void DFS(list *&_path, list *&_visit, int *x, int *y) // hàm đệ quy DFS
     addlist(_visit, *x, *y); //thêm vào danh sách đã thăm
     logList(_path, "Path");
     logList(_visit, "Visit");
-
+    API::setColor(*x,*y,'b');
 
     //kiểm tra các điểm bên trái, bên phải, trước mặt
     if(direct == 1)
     {
         if(!API::wallFront()) //không có tường phía trước
         {
-            if(!check((*x),(*y)+1, _visit))
+            if(check((*x),(*y)+1, _visit))
             {
                 API::moveForward();
                 *y = *y + 1;
@@ -391,7 +405,7 @@ void DFS(list *&_path, list *&_visit, int *x, int *y) // hàm đệ quy DFS
         }
         else if (!API::wallLeft()) // rẽ trái đổi direct
         {
-            if (!check((*x) - 1, (*y), _visit))
+            if (check((*x) - 1, (*y), _visit))
             {
                 API::turnLeft();
                 direct = 4;
@@ -403,7 +417,7 @@ void DFS(list *&_path, list *&_visit, int *x, int *y) // hàm đệ quy DFS
         }
         else if (!API::wallRight())
         {
-            if (!check((*x) + 1, (*y), _visit))
+            if (check((*x) + 1, (*y), _visit))
             {
                 API::turnRight();
                 direct = 2;
@@ -420,7 +434,7 @@ void DFS(list *&_path, list *&_visit, int *x, int *y) // hàm đệ quy DFS
     {
         if (!API::wallFront()) 
         {
-            if (!check((*x) + 1, (*y), _visit))
+            if (check((*x) + 1, (*y), _visit))
             {
                 API::moveForward();
                 (*x) = (*x) + 1;
@@ -431,7 +445,7 @@ void DFS(list *&_path, list *&_visit, int *x, int *y) // hàm đệ quy DFS
         }
         else if (!API::wallLeft()) 
         {
-            if (!check((*x), (*y) + 1, _visit))
+            if (check((*x), (*y) + 1, _visit))
             {
                 API::turnLeft();
                 direct = 1;
@@ -444,7 +458,7 @@ void DFS(list *&_path, list *&_visit, int *x, int *y) // hàm đệ quy DFS
         }
         else if (!API::wallRight())
         {
-            if (!check((*x), (*y) - 1, _visit))
+            if (check((*x), (*y) - 1, _visit))
             {
                 API::turnRight();
                 direct = 3;
@@ -460,7 +474,7 @@ void DFS(list *&_path, list *&_visit, int *x, int *y) // hàm đệ quy DFS
     {
         if (!API::wallFront()) 
         {
-            if (!check((*x), (*y) - 1, _visit))
+            if (check((*x), (*y) - 1, _visit))
             {
                 API::moveForward();
                 (*y) = (*y) - 1;
@@ -470,7 +484,7 @@ void DFS(list *&_path, list *&_visit, int *x, int *y) // hàm đệ quy DFS
         }
         else if (!API::wallLeft()) // rẽ trái đổi direct
         {
-            if (!check((*x) + 1, (*y), _visit))
+            if (check((*x) + 1, (*y), _visit))
             {
                 API::turnLeft();
                 direct = 2;
@@ -482,7 +496,7 @@ void DFS(list *&_path, list *&_visit, int *x, int *y) // hàm đệ quy DFS
         }
         else if (!API::wallRight())
         {
-            if (!check((*x) + 1, (*y), _visit))
+            if (check((*x) + 1, (*y), _visit))
             {
                 API::turnRight();
                 direct = 4;
@@ -498,7 +512,7 @@ void DFS(list *&_path, list *&_visit, int *x, int *y) // hàm đệ quy DFS
     {
         if (!API::wallFront()) 
         {
-            if (!check((*x) - 1, (*y), _visit))
+            if (check((*x) - 1, (*y), _visit))
             {
                 API::moveForward();
                 (*x) = (*x) - 1;
@@ -508,7 +522,7 @@ void DFS(list *&_path, list *&_visit, int *x, int *y) // hàm đệ quy DFS
         }
         else if (!API::wallLeft()) // rẽ trái đổi direct
         {
-            if (!check((*x), (*y) - 1, _visit))
+            if (check((*x), (*y) - 1, _visit))
             {
                 API::turnLeft();
                 direct = 3;
@@ -520,7 +534,7 @@ void DFS(list *&_path, list *&_visit, int *x, int *y) // hàm đệ quy DFS
         }
         else if (!API::wallRight())
         {
-            if (!check((*x), (*y) + 1, _visit))
+            if (check((*x), (*y) + 1, _visit))
             {
                 API::turnRight();
                 direct = 1;
@@ -532,11 +546,11 @@ void DFS(list *&_path, list *&_visit, int *x, int *y) // hàm đệ quy DFS
         }
         else BT(_path,_visit, x,y);
     }
-    else BT(_path,_visit, x,y);
 }
 
 
-int main(int argc, char* argv[]) {
+int main(int argc, char* argv[]) 
+{
     log("Running...");
     API::setColor(0, 0, 'G');
     API::setText(0, 0, "abc");
@@ -546,8 +560,9 @@ int main(int argc, char* argv[]) {
     list*_path = init();
     list*_visit = init();
 
-    while (true) {
         DFS(_path,_visit, &x,&y);
-        BT(_path, _visit, &x,&y);
-    }
+    
+    delete(_path);
+    delete(_visit);
+    return 0;
 }
