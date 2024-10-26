@@ -183,6 +183,7 @@ struct maze *reflood(struct LIFOqueue **_queue, struct maze *_maze)
     log("reflooding...");
     while ((*_queue)->top != -1)
     {
+        log("continue reflooding...");
         struct Node *popped = popQ(_queue);
         int min = 0;
         short xlocate = popped->x;
@@ -190,7 +191,7 @@ struct maze *reflood(struct LIFOqueue **_queue, struct maze *_maze)
         bool flag = false;                              // if current node has available cells (lower value than current)
         if (_maze->map[xlocate][ylocate]->down != NULL) // if this cell available
         {
-            if (_maze->map[xlocate][ylocate]->value > _maze->map[xlocate][ylocate]->down->value) // if this cell's value lower than popped cell add this cell to queue
+            if (_maze->map[xlocate][ylocate]->value == _maze->map[xlocate][ylocate]->down->value + 1) // if this cell's value lower than popped cell add this cell to queue
             {
                 (*_queue) = addQ(*_queue, _maze->map[xlocate][ylocate]->down);
                 flag = true;
@@ -202,36 +203,40 @@ struct maze *reflood(struct LIFOqueue **_queue, struct maze *_maze)
         }
         if (_maze->map[xlocate][ylocate]->up != NULL)
         {
-            if (_maze->map[xlocate][ylocate]->value > _maze->map[xlocate][ylocate]->up->value)
+            if (_maze->map[xlocate][ylocate]->value == _maze->map[xlocate][ylocate]->up->value + 1)
             {
                 (*_queue) = addQ((*_queue), _maze->map[xlocate][ylocate]->up);
                 flag = true;
             }
             else
             {
-                if (min > _maze->map[xlocate][ylocate]->up->value) // if the next cell to check has lowest value, min take this value
+                if (min == 0)
                 {
                     min = _maze->map[xlocate][ylocate]->up->value;
                 }
-                else
-                    min = min;
+                else if (min > _maze->map[xlocate][ylocate]->up->value)
+                {
+                    min = _maze->map[xlocate][ylocate]->up->value;
+                }
             }
         }
         if (_maze->map[xlocate][ylocate]->left != NULL)
         {
-            if (_maze->map[xlocate][ylocate]->value > _maze->map[xlocate][ylocate]->left->value)
+            if (_maze->map[xlocate][ylocate]->value = _maze->map[xlocate][ylocate]->left->value + 1)
             {
                 (*_queue) = addQ((*_queue), _maze->map[xlocate][ylocate]->left);
                 flag = true;
             }
             else
             {
-                if (min > _maze->map[xlocate][ylocate]->left->value) // if the next cell to check has lowest value, min take this value
+                if (min == 0)
                 {
                     min = _maze->map[xlocate][ylocate]->left->value;
                 }
-                else
-                    min = min;
+                else if (min > _maze->map[xlocate][ylocate]->left->value)
+                {
+                    min = _maze->map[xlocate][ylocate]->left->value;
+                }
             }
         }
         if (_maze->map[xlocate][ylocate]->right != NULL)
@@ -243,17 +248,20 @@ struct maze *reflood(struct LIFOqueue **_queue, struct maze *_maze)
             }
             else
             {
-                if (min > _maze->map[xlocate][ylocate]->right->value) // if the next cell to check has lowest value, min takes this value
+                if (min == 0)
                 {
                     min = _maze->map[xlocate][ylocate]->right->value;
                 }
-                else
-                    min = min;
+                else if (min > _maze->map[xlocate][ylocate]->right->value)
+                {
+                    min = _maze->map[xlocate][ylocate]->right->value;
+                }
             }
         }
 
         if (flag == false) // no available cell then reflood this cell and change value
         {
+            log("changing this cell's value...");
             _maze->map[xlocate][ylocate]->value = min + 1;
             char text[BUFFER_SIZE];
             snprintf(text, BUFFER_SIZE, "%d", min + 1);
@@ -346,7 +354,7 @@ void move(short *x, short *y, struct maze **_maze, struct LIFOqueue **_queue, in
     {
         if (!API_wallFront())
         {
-            if ((*_maze)->map[*x][*y]->value > (*_maze)->map[*x][*y]->up->value)
+            if ((*_maze)->map[*x][*y]->value == (*_maze)->map[*x][*y]->up->value + 1)
             {
                 log("move forward...");
                 API_moveForward();
@@ -356,7 +364,7 @@ void move(short *x, short *y, struct maze **_maze, struct LIFOqueue **_queue, in
         }
         if (!API_wallLeft())
         {
-            if ((*_maze)->map[*x][*y]->value > (*_maze)->map[*x][*y]->left->value)
+            if ((*_maze)->map[*x][*y]->value == (*_maze)->map[*x][*y]->left->value + 1)
             {
                 log("turn left...");
                 API_turnLeft();
@@ -368,7 +376,7 @@ void move(short *x, short *y, struct maze **_maze, struct LIFOqueue **_queue, in
         }
         if (!API_wallRight())
         {
-            if ((*_maze)->map[*x][*y]->value > (*_maze)->map[*x][*y]->right->value)
+            if ((*_maze)->map[*x][*y]->value == (*_maze)->map[*x][*y]->right->value + 1)
             {
                 log("turn right...");
                 API_turnRight();
@@ -383,7 +391,7 @@ void move(short *x, short *y, struct maze **_maze, struct LIFOqueue **_queue, in
         API_turnLeft();
         *direct = SOUTH;
         (*_queue) = addQ(*_queue, (*_maze)->map[*x][*y]);
-        reflood(_queue, *_maze);
+        (*_maze) = reflood(_queue, *_maze);
     }
     if (*direct == EAST)
     {
@@ -425,7 +433,7 @@ void move(short *x, short *y, struct maze **_maze, struct LIFOqueue **_queue, in
             API_turnLeft();
             *direct = WEST;
             (*_queue) = addQ(*_queue, (*_maze)->map[*x][*y]);
-            reflood(_queue, *_maze);
+            (*_maze) = reflood(_queue, *_maze);
         }
     }
     if (*direct == SOUTH)
@@ -469,7 +477,7 @@ void move(short *x, short *y, struct maze **_maze, struct LIFOqueue **_queue, in
         API_turnLeft();
         *direct = NORTH;
         (*_queue) = addQ(*_queue, (*_maze)->map[*x][*y]);
-        reflood(_queue, *_maze);
+        (*_maze) = reflood(_queue, *_maze);
     }
     if (*direct == WEST)
     {
@@ -512,6 +520,6 @@ void move(short *x, short *y, struct maze **_maze, struct LIFOqueue **_queue, in
         API_turnLeft();
         *direct = EAST;
         (*_queue) = addQ(*_queue, (*_maze)->map[*x][*y]);
-        reflood(_queue, *_maze);
+        (*_maze) = reflood(_queue, *_maze);
     }
 }
