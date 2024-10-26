@@ -23,6 +23,5 @@ int main(int argc, char *argv[])
     while (true)
     {
         move(&x, &y, &_maze, &_queue, &direct);
-        setwall(direct, x, y, &_maze);
     }
 }

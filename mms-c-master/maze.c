@@ -359,6 +359,7 @@ void move(short *x, short *y, struct maze **_maze, struct LIFOqueue **_queue, in
                 log("move forward...");
                 API_moveForward();
                 *y = *y + 1;
+                setwall(*direct, *x, *y, _maze);
                 return;
             }
         }
@@ -371,6 +372,7 @@ void move(short *x, short *y, struct maze **_maze, struct LIFOqueue **_queue, in
                 API_moveForward();
                 *direct = WEST;
                 *x = *x - 1;
+                setwall(*direct, *x, *y, _maze);
                 return;
             }
         }
@@ -382,6 +384,7 @@ void move(short *x, short *y, struct maze **_maze, struct LIFOqueue **_queue, in
                 API_turnRight();
                 API_moveForward();
                 *direct = EAST;
+                setwall(*direct, *x, *y, _maze);
                 *x = *x + 1;
                 return;
             }
@@ -402,6 +405,7 @@ void move(short *x, short *y, struct maze **_maze, struct LIFOqueue **_queue, in
                 log("move forward...");
                 API_moveForward();
                 *x = *x + 1;
+                setwall(*direct, *x, *y, _maze);
                 return;
             }
         }
@@ -414,6 +418,7 @@ void move(short *x, short *y, struct maze **_maze, struct LIFOqueue **_queue, in
                 API_moveForward();
                 *direct = NORTH;
                 *y = *y + 1;
+                setwall(*direct, *x, *y, _maze);
                 return;
             }
         }
@@ -426,6 +431,7 @@ void move(short *x, short *y, struct maze **_maze, struct LIFOqueue **_queue, in
                 API_moveForward();
                 *direct = SOUTH;
                 *y = *y - 1;
+                setwall(*direct, *x, *y, _maze);
                 return;
             }
             log("turn aroung");
@@ -445,6 +451,7 @@ void move(short *x, short *y, struct maze **_maze, struct LIFOqueue **_queue, in
             {
                 API_moveForward();
                 *y = *y - 1;
+                setwall(*direct, *x, *y, _maze);
                 return;
             }
         }
@@ -457,6 +464,7 @@ void move(short *x, short *y, struct maze **_maze, struct LIFOqueue **_queue, in
                 API_moveForward();
                 *direct = EAST;
                 *x = *x + 1;
+                setwall(*direct, *x, *y, _maze);
                 return;
             }
         }
@@ -469,6 +477,7 @@ void move(short *x, short *y, struct maze **_maze, struct LIFOqueue **_queue, in
                 API_moveForward();
                 *direct = WEST;
                 *y = *y - 1;
+                setwall(*direct, *x, *y, _maze);
                 return;
             }
         }
@@ -488,6 +497,7 @@ void move(short *x, short *y, struct maze **_maze, struct LIFOqueue **_queue, in
                 log("move forward...");
                 API_moveForward();
                 *x = *x - 1;
+                setwall(*direct, *x, *y, _maze);
                 return;
             }
         }
@@ -500,6 +510,7 @@ void move(short *x, short *y, struct maze **_maze, struct LIFOqueue **_queue, in
                 API_moveForward();
                 *direct = SOUTH;
                 *y = *y - 1;
+                setwall(*direct, *x, *y, _maze);
                 return;
             }
         }
@@ -512,6 +523,7 @@ void move(short *x, short *y, struct maze **_maze, struct LIFOqueue **_queue, in
                 API_moveForward();
                 *direct = NORTH;
                 *y = *y + 1;
+                setwall(*direct, *x, *y, _maze);
                 return;
             }
         }

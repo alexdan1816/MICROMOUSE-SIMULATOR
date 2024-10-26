@@ -61,5 +61,5 @@ struct LIFOqueue *addQ(struct LIFOqueue *_queue, struct Node *_cell);
 void setwall(int direct, short x, short y, struct maze **_maze);
 void move(short *x, short *y, struct maze **_maze, struct LIFOqueue **_queue, int *direct);
 
-void log(char *text);
+void git log(char *text);
 #endif // MAZE_H;
