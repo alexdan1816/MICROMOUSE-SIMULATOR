@@ -5,13 +5,8 @@
 #define EAST 2
 #define SOUTH 3
 #define WEST 4
-#define north 'n'
-#define east 'e'
-#define south 's'
-#define west 'w'
 
 #define MAZESIZE 16
-#define GOAL
 
 #define Xstart 0
 #define Ystart 0
@@ -19,47 +14,60 @@
 #define QSIZE 80
 #define BUFFER_SIZE 4
 
-typedef struct Node // Node structure
+#define HIGHESTVAL 255
+
+void logmess(char *text);
+// define the nodes stand for maze cells
+typedef struct Node
 {
     short x;
     short y;
-    short value;
-    short visited;
+    int value;
+    int visited;
 
     struct Node *up;
     struct Node *down;
     struct Node *left;
     struct Node *right;
 } Node;
-typedef struct maze // maze structure
+// function for Node
+Node *createNode(const short x, const short y, const int value);
+void deleteNode(Node **_this_node);
+
+// define the structure of maze
+typedef struct maze
 {
-    Node *map[MAZESIZE][MAZESIZE];
+    Node *_this_map[MAZESIZE][MAZESIZE];
 } maze;
-typedef struct LIFOqueue // Queue Last In First Out
+// functions for maze
+maze *maze_init(maze *_maze);
+void flood_value(Node *_this_node);
+void set_visited(Node **_this_cell);
+Node *set_wall(Node *_this_cell, const short direct);
+bool accessible_neighbor_check(Node *_this_cell, int current_value);
+int min_value_check(Node *_this_cell);
+
+// define the queue for floodfill
+typedef struct queue
 {
-    struct Node *Q[QSIZE];
+    Node *_queue[QSIZE];
     int top;
-} LIFOqueue;
+} queue;
+// functions for queue
+queue *initQ();
+queue *addQ(Node *_this_cell, queue *_this_queue);
+void popQ(queue **_this_queue, Node **_this_node);
+bool isEmpty(queue *_this_queue);
+queue *add_all_neighbors(Node *_this_node, queue *_this_queue);
 
-// Node functions
-struct Node *new_Node(short x, short y);
-bool Nodecheckup(struct Node *_cell);
-bool Nodecheckdown(struct Node *_cell);
-bool Nodecheckleft(struct Node *_cell);
-bool Nodecheckright(struct Node *_cell);
+// floodfill assisting functions
+// bool accessible_neighbor_check(Node *_this_cell, int current_value);
+// int min_value_take(Node *_this_cell);
+// bool lower_neighbor_check(Node *_this_cell, int current_value);
+// void logmess(char *text);
+// queue *add_neighbors(Node *_this_Cell, queue *_this_queue);
+bool check_for_smallest_neighbors(Node *_this_cell);
+int get_smallest_neighbor_value(Node *_this_cell);
+short get_smallest_neighbor_dir(Node *_this_cell);
 
-// Maze functions
-struct maze *mazeinit();
-struct maze *reflood(struct LIFOqueue **_queue, struct maze *_maze);
-struct maze *connectcell(struct maze *maze);
-// Queue function
-struct LIFOqueue *QueueInit();
-struct Node *popQ(struct LIFOqueue **_queue);
-struct LIFOqueue *addQ(struct LIFOqueue *_queue, struct Node *_cell);
-
-// Maze explore
-void setwall(int direct, short x, short y, struct maze **_maze);
-void move(short *x, short *y, struct maze **_maze, struct LIFOqueue **_queue, int *direct);
-
-void git log(char *text);
 #endif // MAZE_H;

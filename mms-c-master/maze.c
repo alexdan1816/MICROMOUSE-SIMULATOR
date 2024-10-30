@@ -3,535 +3,450 @@
 #include <stdlib.h>
 #include "API.h"
 #include "maze.h"
-// Function to create a new Node
-Node *new_Node(short x, short y)
+
+void logmess(char *text)
 {
-    Node *node = (Node *)malloc(sizeof(Node));
-    node->x = x;
-    node->y = y;
-    node->value = 0;   // Mặc định giá trị là 0
-    node->visited = 0; // Chưa được thăm
-    node->up = NULL;
-    node->down = NULL;
-    node->left = NULL;
-    node->right = NULL;
-    return node;
+    fprintf(stderr, "%s\n", text);
+    fflush(stderr);
 }
-// Function to create a new Maze
-struct maze *mazeinit()
+// functions for node
+Node *createNode(const short x, const short y, const int value)
 {
-    log("creating maze...");
-    struct maze *_maze = (struct maze *)malloc(sizeof(struct maze));
-    // init cells in maze
-    for (int i = 0; i < MAZESIZE; i++)
+    Node *_newNode = (struct Node *)malloc(sizeof(struct Node));
+    _newNode->x = x;
+    _newNode->y = y;
+    _newNode->value = value;
+    _newNode->visited = 0;
+    _newNode->down = NULL;
+    _newNode->left = NULL;
+    _newNode->right = NULL;
+    _newNode->up = NULL;
+    return _newNode;
+}
+void deleteNode(Node **_this_node)
+{
+    free(*(_this_node));
+    return;
+}
+
+// function for maze
+maze *maze_init(maze *_maze)
+{
+    _maze = (maze *)malloc(sizeof(maze));
+    if (!_maze)
     {
-        for (int j = 0; j < MAZESIZE; j++)
+        fprintf(stderr, "Memory allocation failed for maze.\n");
+        return NULL;
+    }
+
+    // Khởi tạo từng ô trong mê cung với giá trị mặc định
+    for (short i = 0; i < MAZESIZE; i++)
+    {
+        for (short j = 0; j < MAZESIZE; j++)
         {
-            if (i == 7 && j == 7 || i == 7 && j == 8 || i == 8 && j == 7 || i == 8 && j == 8) // set up for 4 center cells
+            int value;
+            // Thiết lập giá trị cho từng vị trí
+            if ((i == (MAZESIZE / 2) || i == (MAZESIZE / 2) - 1) &&
+                (j == (MAZESIZE / 2) || j == (MAZESIZE / 2) - 1))
             {
-                _maze->map[i][j] = new_Node(i, j);
-                _maze->map[i][j]->value = 0;
-                char text[BUFFER_SIZE];
-                snprintf(text, BUFFER_SIZE, "%d", 0);
-                API_setText(i, j, text);
+                value = 0; // Ô đích ở giữa mê cung
             }
-            else if (i <= 7 && j <= 7) // caculate value of cells based on location
+            else if (i <= 7 && j <= 7)
             {
-                _maze->map[i][j] = new_Node(i, j);
-                _maze->map[i][j]->value = (7 - i) + (7 - j);
-                // display value on the cell
-                char text[BUFFER_SIZE];
-                snprintf(text, BUFFER_SIZE, "%d", _maze->map[i][j]->value);
-                API_setText(i, j, text);
+                value = (7 - i) + (7 - j);
             }
             else if (i <= 7 && j >= 8)
             {
-                _maze->map[i][j] = new_Node(i, j);
-                _maze->map[i][j]->value = (7 - i) + abs(8 - j);
-                char text[BUFFER_SIZE];
-                snprintf(text, BUFFER_SIZE, "%d", _maze->map[i][j]->value);
-                API_setText(i, j, text);
+                value = (7 - i) + (j - 8);
             }
             else if (i >= 8 && j <= 7)
             {
-                _maze->map[i][j] = new_Node(i, j);
-                _maze->map[i][j]->value = abs(8 - i) + (7 - j);
-                char text[BUFFER_SIZE];
-                snprintf(text, BUFFER_SIZE, "%d", _maze->map[i][j]->value);
-                API_setText(i, j, text);
-            }
-            else if (i >= 8 && j >= 8)
-            {
-                _maze->map[i][j] = new_Node(i, j);
-                _maze->map[i][j]->value = abs(8 - i) + abs(8 - j);
-                char text[BUFFER_SIZE];
-                snprintf(text, BUFFER_SIZE, "%d", _maze->map[i][j]->value);
-                API_setText(i, j, text);
-            }
-        }
-    }
-    for (int i = 0; i < MAZESIZE; i++) // connecting cells
-    {
-        for (int j = 0; j < MAZESIZE; j++)
-        {
-            if (i == 0 && j == 0)
-            {
-                _maze->map[i][j]->left = NULL;
-                _maze->map[i][j]->down = NULL;
-                _maze->map[i][j]->up = _maze->map[i][j + 1];
-                _maze->map[i][j]->right = _maze->map[i + 1][j];
-            }
-            else if (i == 0 && j == MAZESIZE - 1)
-            {
-                _maze->map[i][j]->left = NULL;
-                _maze->map[i][j]->up = NULL;
-                _maze->map[i][j]->right = _maze->map[i + 1][j];
-                _maze->map[i][j]->down = _maze->map[i][j - 1];
-            }
-            else if (i == MAZESIZE - 1 && j == MAZESIZE - 1)
-            {
-                _maze->map[i][j]->right = NULL;
-                _maze->map[i][j]->up = NULL;
-                _maze->map[i][j]->left = _maze->map[i - 1][j];
-                _maze->map[i][j]->down = _maze->map[i][j - 1];
-            }
-            else if (i == MAZESIZE - 1 && j == 0)
-            {
-                _maze->map[i][j]->right = NULL;
-                _maze->map[i][j]->down = NULL;
-                _maze->map[i][j]->left = _maze->map[i - 1][j];
-                _maze->map[i][j]->up = _maze->map[i][j + 1];
-            }
-            else if (i == 0 && j != 0 && j != MAZESIZE - 1) // lefthand edge
-            {
-                _maze->map[i][j]->left = NULL;
-                _maze->map[i][j]->right = _maze->map[i + 1][j];
-                _maze->map[i][j]->up = _maze->map[i][j + 1];
-                _maze->map[i][j]->down = _maze->map[i][j - 1];
-            }
-            else if (i != 0 && i != MAZESIZE - 1 && j == MAZESIZE - 1) // top edge
-            {
-                _maze->map[i][j]->up = NULL;
-                _maze->map[i][j]->right = _maze->map[i + 1][j];
-                _maze->map[i][j]->left = _maze->map[i - 1][j];
-                _maze->map[i][j]->down = _maze->map[i][j - 1];
-            }
-            else if (j != 0 && j != MAZESIZE - 1 && i == MAZESIZE - 1) // righthand edge
-            {
-                _maze->map[i][j]->right = NULL;
-                _maze->map[i][j]->left = _maze->map[i - 1][j];
-                _maze->map[i][j]->up = _maze->map[i][j + 1];
-                _maze->map[i][j]->down = _maze->map[i][j - 1];
-            }
-            else if (i != 0 && i != MAZESIZE - 1 && j == 0) // bottom edge
-            {
-                _maze->map[i][j]->down = NULL;
-                _maze->map[i][j]->right = _maze->map[i + 1][j];
-                _maze->map[i][j]->left = _maze->map[i - 1][j];
-                _maze->map[i][j]->up = _maze->map[i][j + 1];
+                value = (i - 8) + (7 - j);
             }
             else
             {
-                _maze->map[i][j]->down = _maze->map[i][j - 1];
-                _maze->map[i][j]->right = _maze->map[i + 1][j];
-                _maze->map[i][j]->left = _maze->map[i - 1][j];
-                _maze->map[i][j]->up = _maze->map[i][j + 1];
+                value = (i - 8) + (j - 8);
             }
+            _maze->_this_map[i][j] = createNode(i, j, value);
         }
     }
-    log("done creating maze...");
-    return _maze;
-}
 
-struct LIFOqueue *QueueInit() // initialize Queue
-{
-    struct LIFOqueue *_queue = (struct LIFOqueue *)malloc(sizeof(struct LIFOqueue));
-    if (_queue == NULL)
+    // Thiết lập các con trỏ cho từng ô để liên kết với ô liền kề
+    for (short i = 0; i < MAZESIZE; i++)
     {
-        return NULL;
+        for (short j = 0; j < MAZESIZE; j++)
+        {
+            _maze->_this_map[i][j]->up = (j < MAZESIZE - 1) ? _maze->_this_map[i][j + 1] : NULL;
+            _maze->_this_map[i][j]->down = (j > 0) ? _maze->_this_map[i][j - 1] : NULL;
+            _maze->_this_map[i][j]->left = (i > 0) ? _maze->_this_map[i - 1][j] : NULL;
+            _maze->_this_map[i][j]->right = (i < MAZESIZE - 1) ? _maze->_this_map[i + 1][j] : NULL;
+        }
     }
 
-    // Khởi tạo tất cả các phần tử trong mảng Q là NULL
-    for (int i = 0; i < QSIZE; i++)
+    // Xử lý các góc và cạnh của mê cung
+    _maze->_this_map[0][0]->left = NULL; // Góc dưới trái
+    _maze->_this_map[0][0]->down = NULL;
+    _maze->_this_map[0][MAZESIZE - 1]->left = NULL; // Góc trên trái
+    _maze->_this_map[0][MAZESIZE - 1]->up = NULL;
+    _maze->_this_map[MAZESIZE - 1][0]->right = NULL; // Góc dưới phải
+    _maze->_this_map[MAZESIZE - 1][0]->down = NULL;
+    _maze->_this_map[MAZESIZE - 1][MAZESIZE - 1]->right = NULL; // Góc trên phải
+    _maze->_this_map[MAZESIZE - 1][MAZESIZE - 1]->up = NULL;
+
+    for (short i = 1; i < MAZESIZE - 1; i++)
     {
-        _queue->Q[i] = NULL;
+        _maze->_this_map[i][0]->down = NULL;             // Cạnh dưới
+        _maze->_this_map[i][MAZESIZE - 1]->up = NULL;    // Cạnh trên
+        _maze->_this_map[0][i]->left = NULL;             // Cạnh trái
+        _maze->_this_map[MAZESIZE - 1][i]->right = NULL; // Cạnh phải
     }
-    _queue->top = -1;
-    return _queue;
-}
-struct Node *popQ(struct LIFOqueue **_queue) // take out top cell
-{
-    if ((*_queue)->top == -1)
+
+    // Hiển thị giá trị của mỗi ô lên màn hình mê cung
+    for (short i = 0; i < MAZESIZE; i++)
     {
-        return NULL;
-    }
-    struct Node *takeout = (*_queue)->Q[(*_queue)->top];
-    (*_queue)->Q[(*_queue)->top] = NULL;
-    (*_queue)->top--;
-
-    return takeout;
-}
-struct LIFOqueue *addQ(struct LIFOqueue *_queue, struct Node *_cell) // add cell
-{
-    _queue->top++;
-    _queue->Q[_queue->top] = _cell;
-    return _queue;
-}
-
-struct maze *reflood(struct LIFOqueue **_queue, struct maze *_maze)
-{
-    log("reflooding...");
-    while ((*_queue)->top != -1)
-    {
-        log("continue reflooding...");
-        struct Node *popped = popQ(_queue);
-        int min = 0;
-        short xlocate = popped->x;
-        short ylocate = popped->y;
-        bool flag = false;                              // if current node has available cells (lower value than current)
-        if (_maze->map[xlocate][ylocate]->down != NULL) // if this cell available
+        for (short j = 0; j < MAZESIZE; j++)
         {
-            if (_maze->map[xlocate][ylocate]->value == _maze->map[xlocate][ylocate]->down->value + 1) // if this cell's value lower than popped cell add this cell to queue
-            {
-                (*_queue) = addQ(*_queue, _maze->map[xlocate][ylocate]->down);
-                flag = true;
-            }
-            else // if this cell's value higher or equal to popped cell, take minimum value is this cell's value
-            {
-                min = _maze->map[xlocate][ylocate]->down->value;
-            }
-        }
-        if (_maze->map[xlocate][ylocate]->up != NULL)
-        {
-            if (_maze->map[xlocate][ylocate]->value == _maze->map[xlocate][ylocate]->up->value + 1)
-            {
-                (*_queue) = addQ((*_queue), _maze->map[xlocate][ylocate]->up);
-                flag = true;
-            }
-            else
-            {
-                if (min == 0)
-                {
-                    min = _maze->map[xlocate][ylocate]->up->value;
-                }
-                else if (min > _maze->map[xlocate][ylocate]->up->value)
-                {
-                    min = _maze->map[xlocate][ylocate]->up->value;
-                }
-            }
-        }
-        if (_maze->map[xlocate][ylocate]->left != NULL)
-        {
-            if (_maze->map[xlocate][ylocate]->value = _maze->map[xlocate][ylocate]->left->value + 1)
-            {
-                (*_queue) = addQ((*_queue), _maze->map[xlocate][ylocate]->left);
-                flag = true;
-            }
-            else
-            {
-                if (min == 0)
-                {
-                    min = _maze->map[xlocate][ylocate]->left->value;
-                }
-                else if (min > _maze->map[xlocate][ylocate]->left->value)
-                {
-                    min = _maze->map[xlocate][ylocate]->left->value;
-                }
-            }
-        }
-        if (_maze->map[xlocate][ylocate]->right != NULL)
-        {
-            if (_maze->map[xlocate][ylocate]->value > _maze->map[xlocate][ylocate]->right->value)
-            {
-                (*_queue) = addQ((*_queue), _maze->map[xlocate][ylocate]->right);
-                flag = true;
-            }
-            else
-            {
-                if (min == 0)
-                {
-                    min = _maze->map[xlocate][ylocate]->right->value;
-                }
-                else if (min > _maze->map[xlocate][ylocate]->right->value)
-                {
-                    min = _maze->map[xlocate][ylocate]->right->value;
-                }
-            }
-        }
-
-        if (flag == false) // no available cell then reflood this cell and change value
-        {
-            log("changing this cell's value...");
-            _maze->map[xlocate][ylocate]->value = min + 1;
             char text[BUFFER_SIZE];
-            snprintf(text, BUFFER_SIZE, "%d", min + 1);
-            API_setText(xlocate, ylocate, text);
+            snprintf(text, BUFFER_SIZE, "%d", _maze->_this_map[i][j]->value);
+            API_setText(i, j, text); // Hiển thị giá trị lên ô
         }
     }
+
     return _maze;
 }
-// Maze explore
-void setwall(int direct, short x, short y, struct maze **_maze) // set wall and connect cellnode
+void flood_value(Node *_this_node)
 {
-    log("start setting wall...");
+    _this_node->value = get_smallest_neighbor_value(_this_node) + 1;
+    logmess("floodfilling");
+    char text[BUFFER_SIZE];
+    snprintf(text, BUFFER_SIZE, "%d", _this_node->value);
+    API_setText(_this_node->x, _this_node->y, text); // Hiển thị giá trị lên ô
+}
+void set_visited(Node **_this_cell)
+{
+    API_setColor((*_this_cell)->x, (*_this_cell)->y, 'g');
+    (*_this_cell)->visited = 1;
+    return;
+}
+Node *set_wall(Node *_this_cell, const short direct)
+{
     if (direct == NORTH)
     {
         if (API_wallFront())
         {
-            API_setWall(x, y, 'n');
-            (*_maze)->map[x][y]->up = NULL;
+            API_setWall(_this_cell->x, _this_cell->y, 'n');
+            _this_cell->up = NULL;
         }
         if (API_wallLeft())
         {
-            API_setWall(x, y, 'w');
-            (*_maze)->map[x][y]->left = NULL;
+            API_setWall(_this_cell->x, _this_cell->y, 'w');
+            _this_cell->left = NULL;
         }
         if (API_wallRight())
         {
-            API_setWall(x, y, 'e');
-            (*_maze)->map[x][y]->right = NULL;
+            API_setWall(_this_cell->x, _this_cell->y, 'e');
+            _this_cell->right = NULL;
         }
     }
-    else if (direct == EAST)
+    if (direct == EAST)
     {
+        if (API_wallFront())
+        {
+            API_setWall(_this_cell->x, _this_cell->y, 'e');
+            _this_cell->right = NULL;
+        }
+        if (API_wallLeft())
+        {
+            API_setWall(_this_cell->x, _this_cell->y, 'n');
+            _this_cell->up = NULL;
+        }
+        if (API_wallRight())
+        {
+            API_setWall(_this_cell->x, _this_cell->y, 's');
+            _this_cell->down = NULL;
+        }
+    }
+    if (direct == SOUTH)
+    {
+        if (API_wallFront())
+        {
+            API_setWall(_this_cell->x, _this_cell->y, 's');
+            _this_cell->down = NULL;
+        }
+        if (API_wallLeft())
+        {
+            API_setWall(_this_cell->x, _this_cell->y, 'e');
+            _this_cell->right = NULL;
+        }
+        if (API_wallRight())
+        {
+            API_setWall(_this_cell->x, _this_cell->y, 'w');
+            _this_cell->left = NULL;
+        }
+    }
+    if (direct == WEST)
+    {
+        if (API_wallFront())
+        {
+            API_setWall(_this_cell->x, _this_cell->y, 'w');
+            _this_cell->left = NULL;
+        }
+        if (API_wallLeft())
+        {
+            API_setWall(_this_cell->x, _this_cell->y, 's');
+            _this_cell->down = NULL;
+        }
+        if (API_wallRight())
+        {
+            API_setWall(_this_cell->x, _this_cell->y, 'n');
+            _this_cell->up = NULL;
+        }
+    }
+    return _this_cell;
+}
 
-        if (API_wallFront())
+// function for queue
+queue *initQ()
+{
+    queue *new_Queue = (struct queue *)malloc(sizeof(struct queue));
+    new_Queue->top = -1;
+    return new_Queue;
+}
+bool isEmpty(queue *_this_queue)
+{
+    return _this_queue->top == -1;
+}
+queue *addQ(Node *_this_cell, queue *_this_queue)
+{
+    if (_this_cell->value == 0)
+    {
+        return _this_queue;
+    }
+    _this_queue->top++;
+    _this_queue->_queue[_this_queue->top] = _this_cell;
+    return _this_queue;
+}
+void popQ(queue **_this_queue, Node **_this_node)
+{
+    (*_this_node) = (*_this_queue)->_queue[(*_this_queue)->top];
+    (*_this_queue)->top--;
+}
+queue *add_all_neighbors(Node *_this_node, queue *_this_queue)
+{
+    if (_this_node->x == MAZESIZE - 1)
+    {
+        if (_this_node->y == MAZESIZE - 1) // TOP RIGHT CORNER
         {
-            API_setWall(x, y, 'e');
-            (*_maze)->map[x][y]->right = NULL;
+            _this_queue = addQ(_this_node->down, _this_queue);
+            _this_queue = addQ(_this_node->left, _this_queue);
+            return _this_queue;
         }
-        if (API_wallLeft())
+        else if (_this_node->y == 0) // BOTTOM RIGHT CORNER
         {
-            API_setWall(x, y, 'n');
-            (*_maze)->map[x][y]->up = NULL;
+            _this_queue = addQ(_this_node->up, _this_queue);
+            _this_queue = addQ(_this_node->left, _this_queue);
+            return _this_queue;
         }
-        if (API_wallRight())
+        else // RIGHT SIDE
         {
-            API_setWall(x, y, 's');
-            (*_maze)->map[x][y]->down = NULL;
+            _this_queue = addQ(_this_node->up, _this_queue);
+            _this_queue = addQ(_this_node->left, _this_queue);
+            _this_queue = addQ(_this_node->down, _this_queue);
+            return _this_queue;
         }
     }
-    else if (direct == SOUTH)
+    if (_this_node->x == 0)
     {
-        if (API_wallFront())
+        if (_this_node->y == MAZESIZE - 1) // TOP LEFT CORNER
         {
-            API_setWall(x, y, 's');
-            (*_maze)->map[x][y]->down = NULL;
+            _this_queue = addQ(_this_node->down, _this_queue);
+            _this_queue = addQ(_this_node->right, _this_queue);
+            return _this_queue;
         }
-        if (API_wallLeft())
+        else // LEFT SIDE
         {
-            API_setWall(x, y, 'e');
-            (*_maze)->map[x][y]->right = NULL;
-        }
-        if (API_wallRight())
-        {
-            API_setWall(x, y, 'w');
-            (*_maze)->map[x][y]->left = NULL;
+            _this_queue = addQ(_this_node->up, _this_queue);
+            _this_queue = addQ(_this_node->right, _this_queue);
+            _this_queue = addQ(_this_node->down, _this_queue);
+            return _this_queue;
         }
     }
-    else if (direct == WEST)
+    if (_this_node->y == MAZESIZE - 1) // UP SIDE
     {
-        if (API_wallFront())
-        {
-            API_setWall(x, y, 'w');
-            (*_maze)->map[x][y]->left = NULL;
-        }
-        if (API_wallLeft())
-        {
-            API_setWall(x, y, 's');
-            (*_maze)->map[x][y]->down = NULL;
-        }
-        if (API_wallRight())
-        {
-            API_setWall(x, y, 'n');
-            (*_maze)->map[x][y]->up = NULL;
-        }
+        _this_queue = addQ(_this_node->left, _this_queue);
+        _this_queue = addQ(_this_node->right, _this_queue);
+        _this_queue = addQ(_this_node->down, _this_queue);
+        return _this_queue;
+    }
+    if (_this_node->y == 0) // DOWN SIDE
+    {
+        _this_queue = addQ(_this_node->left, _this_queue);
+        _this_queue = addQ(_this_node->right, _this_queue);
+        _this_queue = addQ(_this_node->up, _this_queue);
+        return _this_queue;
     }
 }
-void move(short *x, short *y, struct maze **_maze, struct LIFOqueue **_queue, int *direct)
+// floodfill assisting functions
+// bool lower_neighbor_check(Node *_this_cell, int curent_value)
+// {
+//     return curent_value == _this_cell->value + 1;
+// }
+// bool accessible_neighbor_check(Node *_this_cell, int current_value)
+// {
+//     if (_this_cell->up != NULL)
+//     {
+//         if (_this_cell->up->value + 1 == current_value)
+//             return true;
+//     }
+//     else if (_this_cell->down != NULL)
+//     {
+//         if (_this_cell->down->value + 1 == current_value)
+//             return true;
+//     }
+//     else if (_this_cell->right != NULL)
+//     {
+//         if (_this_cell->right->value + 1 == current_value)
+//             return true;
+//     }
+//     else if (_this_cell->left != NULL)
+//     {
+//         if (_this_cell->left->value + 1 == current_value)
+//             return true;
+//     }
+//     else
+//         return false;
+// }
+// int min_value_check(Node *_this_cell)
+// {
+//     int min = 0;
+//     if (_this_cell->up != NULL)
+//     {
+//         min = _this_cell->up->value;
+//     }
+//     if (_this_cell->down != NULL)
+//     {
+//         if (min >= _this_cell->down->value || min == 0)
+//         {
+//             min = _this_cell->down->value;
+//         }
+//     }
+//     if (_this_cell->left != NULL)
+//     {
+//         if (min >= _this_cell->left->value || min == 0)
+//         {
+//             min = _this_cell->left->value;
+//         }
+//     }
+//     if (_this_cell->right != NULL)
+//     {
+//         if (min >= _this_cell->right->value || min == 0)
+//         {
+//             min = _this_cell->right->value;
+//         }
+//     }
+//     return min;
+// }
+// queue *add_neighbors(Node *_this_Cell, queue *_this_queue)
+// {
+//     if (_this_Cell->up->value == 0)
+//     {
+//         _this_queue = addQ(_this_Cell->down, _this_queue);
+//         _this_queue = addQ(_this_Cell->right, _this_queue);
+//         _this_queue = addQ(_this_Cell->left, _this_queue);
+//     }
+//     else if (_this_Cell->down->value == 0)
+//     {
+//         _this_queue = addQ(_this_Cell->up, _this_queue);
+//         _this_queue = addQ(_this_Cell->right, _this_queue);
+//         _this_queue = addQ(_this_Cell->left, _this_queue);
+//     }
+//     else if (_this_Cell->right->value == 0)
+//     {
+//         _this_queue = addQ(_this_Cell->up, _this_queue);
+//         _this_queue = addQ(_this_Cell->down, _this_queue);
+//         _this_queue = addQ(_this_Cell->left, _this_queue);
+//     }
+//     else if (_this_Cell->left->value == 0)
+//     {
+//         _this_queue = addQ(_this_Cell->up, _this_queue);
+//         _this_queue = addQ(_this_Cell->right, _this_queue);
+//         _this_queue = addQ(_this_Cell->down, _this_queue);
+//     }
+// }
+bool check_for_smallest_neighbors(Node *_this_cell)
 {
-    if (*direct == NORTH)
+    int current_value = _this_cell->value;
+    // check up
+    if (_this_cell->up != NULL && _this_cell->up->down != NULL && _this_cell->up->value + 1 == current_value)
     {
-        if (!API_wallFront())
-        {
-            if ((*_maze)->map[*x][*y]->value == (*_maze)->map[*x][*y]->up->value + 1)
-            {
-                log("move forward...");
-                API_moveForward();
-                *y = *y + 1;
-                setwall(*direct, *x, *y, _maze);
-                return;
-            }
-        }
-        if (!API_wallLeft())
-        {
-            if ((*_maze)->map[*x][*y]->value == (*_maze)->map[*x][*y]->left->value + 1)
-            {
-                log("turn left...");
-                API_turnLeft();
-                API_moveForward();
-                *direct = WEST;
-                *x = *x - 1;
-                setwall(*direct, *x, *y, _maze);
-                return;
-            }
-        }
-        if (!API_wallRight())
-        {
-            if ((*_maze)->map[*x][*y]->value == (*_maze)->map[*x][*y]->right->value + 1)
-            {
-                log("turn right...");
-                API_turnRight();
-                API_moveForward();
-                *direct = EAST;
-                setwall(*direct, *x, *y, _maze);
-                *x = *x + 1;
-                return;
-            }
-        }
-        log("turn aroung");
-        API_turnLeft();
-        API_turnLeft();
-        *direct = SOUTH;
-        (*_queue) = addQ(*_queue, (*_maze)->map[*x][*y]);
-        (*_maze) = reflood(_queue, *_maze);
+        return true;
     }
-    if (*direct == EAST)
+    // check down
+    if (_this_cell->down != NULL && _this_cell->down->up != NULL && _this_cell->down->value + 1 == current_value)
     {
-        if (!API_wallFront())
-        {
-            if ((*_maze)->map[*x][*y]->value > (*_maze)->map[*x][*y]->right->value)
-            {
-                log("move forward...");
-                API_moveForward();
-                *x = *x + 1;
-                setwall(*direct, *x, *y, _maze);
-                return;
-            }
-        }
-        if (!API_wallLeft())
-        {
-            if ((*_maze)->map[*x][*y]->value > (*_maze)->map[*x][*y]->up->value)
-            {
-                log("turn left...");
-                API_turnLeft();
-                API_moveForward();
-                *direct = NORTH;
-                *y = *y + 1;
-                setwall(*direct, *x, *y, _maze);
-                return;
-            }
-        }
-        if (!API_wallRight())
-        {
-            if ((*_maze)->map[*x][*y]->value > (*_maze)->map[*x][*y]->down->value)
-            {
-                log("turn right...");
-                API_turnRight();
-                API_moveForward();
-                *direct = SOUTH;
-                *y = *y - 1;
-                setwall(*direct, *x, *y, _maze);
-                return;
-            }
-            log("turn aroung");
-            API_turnLeft();
-            API_turnLeft();
-            *direct = WEST;
-            (*_queue) = addQ(*_queue, (*_maze)->map[*x][*y]);
-            (*_maze) = reflood(_queue, *_maze);
-        }
+        return true;
     }
-    if (*direct == SOUTH)
+    // check right
+    if (_this_cell->right != NULL && _this_cell->right->left != NULL && _this_cell->down->value + 1 == current_value)
     {
-        if (!API_wallFront())
-        {
-            log("move forward...");
-            if ((*_maze)->map[*x][*y]->value > (*_maze)->map[*x][*y]->down->value)
-            {
-                API_moveForward();
-                *y = *y - 1;
-                setwall(*direct, *x, *y, _maze);
-                return;
-            }
-        }
-        if (!API_wallLeft())
-        {
-            if ((*_maze)->map[*x][*y]->value > (*_maze)->map[*x][*y]->right->value)
-            {
-                log("turn left...");
-                API_turnLeft();
-                API_moveForward();
-                *direct = EAST;
-                *x = *x + 1;
-                setwall(*direct, *x, *y, _maze);
-                return;
-            }
-        }
-        if (!API_wallRight())
-        {
-            if ((*_maze)->map[*x][*y]->value > (*_maze)->map[*x][*y]->left->value)
-            {
-                log("turn right...");
-                API_turnRight();
-                API_moveForward();
-                *direct = WEST;
-                *y = *y - 1;
-                setwall(*direct, *x, *y, _maze);
-                return;
-            }
-        }
-        log("turn aroung");
-        API_turnLeft();
-        API_turnLeft();
-        *direct = NORTH;
-        (*_queue) = addQ(*_queue, (*_maze)->map[*x][*y]);
-        (*_maze) = reflood(_queue, *_maze);
+        return true;
     }
-    if (*direct == WEST)
+    // check left
+    if (_this_cell->left != NULL && _this_cell->left->right != NULL && _this_cell->left->value + 1 == current_value)
     {
-        if (!API_wallFront())
-        {
-            if ((*_maze)->map[*x][*y]->value > (*_maze)->map[*x][*y]->left->value)
-            {
-                log("move forward...");
-                API_moveForward();
-                *x = *x - 1;
-                setwall(*direct, *x, *y, _maze);
-                return;
-            }
-        }
-        if (!API_wallLeft())
-        {
-            if ((*_maze)->map[*x][*y]->value > (*_maze)->map[*x][*y]->down->value)
-            {
-                log("turn left...");
-                API_turnLeft();
-                API_moveForward();
-                *direct = SOUTH;
-                *y = *y - 1;
-                setwall(*direct, *x, *y, _maze);
-                return;
-            }
-        }
-        if (!API_wallRight())
-        {
-            if ((*_maze)->map[*x][*y]->value > (*_maze)->map[*x][*y]->up->value)
-            {
-                log("turn right...");
-                API_turnRight();
-                API_moveForward();
-                *direct = NORTH;
-                *y = *y + 1;
-                setwall(*direct, *x, *y, _maze);
-                return;
-            }
-        }
-        log("turn aroung");
-        API_turnLeft();
-        API_turnLeft();
-        *direct = EAST;
-        (*_queue) = addQ(*_queue, (*_maze)->map[*x][*y]);
-        (*_maze) = reflood(_queue, *_maze);
+        return true;
+    }
+    return false;
+}
+int get_smallest_neighbor_value(Node *_this_cell)
+{
+    int min = HIGHESTVAL;
+    if (_this_cell->up != NULL && _this_cell->up->down != NULL && _this_cell->up->value < min)
+        ;
+    {
+        min = _this_cell->up->value;
+    }
+    // check down
+    if (_this_cell->down != NULL && _this_cell->down->up != NULL && _this_cell->down->value < min)
+        ;
+    {
+        min = _this_cell->down->value;
+    }
+    // check right
+    if (_this_cell->right != NULL && _this_cell->right->left != NULL && _this_cell->right->value < min)
+        ;
+    {
+        min = _this_cell->right->value;
+    }
+    // check left
+    if (_this_cell->left != NULL && _this_cell->left->right != NULL && _this_cell->left->value < min)
+        ;
+    {
+        min = _this_cell->left->value;
+    }
+    return min;
+}
+short get_smallest_neighbor_dir(Node *_this_cell)
+{
+    int min = get_smallest_neighbor_value(_this_cell);
+    // NORTH CELL
+    if (_this_cell->up != NULL && _this_cell->up->value == min)
+    {
+        return NORTH;
+    }
+    // SOUTH CELL
+    if (_this_cell->down != NULL && _this_cell->down->value == min)
+    {
+        return SOUTH;
+    }
+    // EAST CELL
+    if (_this_cell->right != NULL && _this_cell->right->value == min)
+    {
+        return EAST;
+    }
+    // WEST CELL
+    if (_this_cell->left != NULL && _this_cell->left->value == min)
+    {
+        return WEST;
     }
 }
