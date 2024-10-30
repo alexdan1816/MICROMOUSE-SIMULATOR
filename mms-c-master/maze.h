@@ -41,11 +41,11 @@ typedef struct maze
 } maze;
 // functions for maze
 maze *maze_init(maze *_maze);
-void flood_value(Node *_this_node);
+maze *flood_value(Node **_this_node, maze *_this_maze);
 void set_visited(Node **_this_cell);
 Node *set_wall(Node *_this_cell, const short direct);
-bool accessible_neighbor_check(Node *_this_cell, int current_value);
-int min_value_check(Node *_this_cell);
+// bool accessible_neighbor_check(Node *_this_cell, int current_value);
+// int min_value_check(Node *_this_cell);
 
 // define the queue for floodfill
 typedef struct queue
@@ -56,7 +56,7 @@ typedef struct queue
 // functions for queue
 queue *initQ();
 queue *addQ(Node *_this_cell, queue *_this_queue);
-void popQ(queue **_this_queue, Node **_this_node);
+Node *popQ(queue **_this_queue);
 bool isEmpty(queue *_this_queue);
 queue *add_all_neighbors(Node *_this_node, queue *_this_queue);
 

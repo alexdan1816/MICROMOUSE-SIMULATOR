@@ -18,18 +18,14 @@ bool check_goal(short x, short y)
 maze *floodfill(maze *_maze, queue **_queue)
 {
     logmess("floodfilling");
-    while (!isEmpty(*_queue))
+    while (!isEmpty((*_queue)))
     {
-        while (!isEmpty((*_queue)))
+        Node *_this_node = popQ(_queue);
+        if (!check_for_smallest_neighbors(_this_node))
         {
-            Node *_this_node;
-            popQ(_queue, &_this_node);
-            if (!check_for_smallest_neighbors(_this_node))
-            {
-                flood_value(_this_node);
-            }
-            (*_queue) = add_all_neighbors(_this_node, (*_queue));
+            _maze = flood_value(&_this_node, _maze);
         }
+        (*_queue) = add_all_neighbors(_this_node, (*_queue));
     }
     return _maze;
 }
@@ -38,32 +34,33 @@ void move(struct maze *_maze, short *x, short *y, short *direct)
     short next_direct = get_smallest_neighbor_dir(_maze->_this_map[*x][*y]);
     if (next_direct == NORTH)
     {
-        (*y) = (*y) - 1;
+        (*y) = (*y) + 1;
         if (*direct == NORTH)
         {
-            API_moveForward();
             logmess("Moving Forward");
+            API_moveForward();
         }
         else if (*direct == EAST)
         {
-            API_turnLeft();
             logmess("Turning Left");
+            API_turnLeft();
+            logmess("Moving Forward");
             API_moveForward();
         }
         else if (*direct == SOUTH)
         {
-            API_turnRight();
-            API_turnRight();
             logmess("Turning Back");
-            API_moveForward();
+            API_turnRight();
+            API_turnRight();
             logmess("Moving Forward");
+            API_moveForward();
         }
         else if (*direct == WEST)
         {
-            API_turnRight();
             logmess("Turning Right");
-            API_moveForward();
+            API_turnRight();
             logmess("Moving Forward");
+            API_moveForward();
         }
     }
     else if (next_direct == EAST)
@@ -71,60 +68,61 @@ void move(struct maze *_maze, short *x, short *y, short *direct)
         (*x) = (*x) + 1;
         if (*direct == NORTH)
         {
-            API_turnRight();
             logmess("Turning Right");
-            API_moveForward();
+            API_turnRight();
             logmess("Moving Forward");
+            API_moveForward();
         }
         else if (*direct == EAST)
         {
-            API_moveForward();
             logmess("Moving Forward");
+            API_moveForward();
         }
         else if (*direct == SOUTH)
         {
-            API_turnLeft();
             logmess("Turning Left");
-            API_moveForward();
+            API_turnLeft();
             logmess("Moving Forward");
+            API_moveForward();
         }
         else if (*direct == WEST)
         {
-            API_turnRight();
-            API_turnRight();
             logmess("Turning Back");
-            API_moveForward();
+            API_turnRight();
+            API_turnRight();
             logmess("Moving Forward");
+            API_moveForward();
         }
     }
     else if (next_direct == SOUTH)
     {
-        (*y) = (*y) + 1;
+        (*y) = (*y) - 1;
         if (*direct == NORTH)
         {
-            API_turnRight();
-            API_turnRight();
             logmess("Turning Back");
-            API_moveForward();
+            API_turnRight();
+            API_turnRight();
             logmess("Moving Forward");
+            API_moveForward();
         }
         else if (*direct == EAST)
         {
-            API_turnRight();
             logmess("Turning Right");
-            API_moveForward();
+            API_turnRight();
             logmess("Moving Forward");
+            API_moveForward();
         }
         else if (*direct == SOUTH)
         {
-            API_moveForward();
             logmess("Moving Forward");
+            API_moveForward();
         }
         else if (*direct == WEST)
         {
+            logmess("Turning Left");
             API_turnLeft();
-            API_moveForward();
             logmess("Moving Forward");
+            API_moveForward();
         }
     }
     else if (next_direct == WEST)
@@ -132,30 +130,30 @@ void move(struct maze *_maze, short *x, short *y, short *direct)
         (*x) = (*x) - 1;
         if (*direct == NORTH)
         {
-            API_turnLeft();
             logmess("Turning Left");
-            API_moveForward();
+            API_turnLeft();
             logmess("Moving Forward");
+            API_moveForward();
         }
         else if (*direct == EAST)
         {
-            API_turnRight();
-            API_turnRight();
             logmess("Turning Back");
-            API_moveForward();
+            API_turnRight();
+            API_turnRight();
             logmess("Moving Forward");
+            API_moveForward();
         }
         else if (*direct == SOUTH)
         {
-            API_turnRight();
             logmess("Turning Right");
-            API_moveForward();
+            API_turnRight();
             logmess("Moving Forward");
+            API_moveForward();
         }
         else if (*direct == WEST)
         {
-            API_moveForward();
             logmess("Moving Forward");
+            API_moveForward();
         }
     }
     *direct = next_direct;
@@ -172,13 +170,11 @@ int main(int argc, char *argv[])
     short x = 0;
     short y = 0;
     _maze->_this_map[x][y] = set_wall(_maze->_this_map[x][y], direct);
-    move(_maze, &x, &y, &direct);
-
     while (true)
     {
-        direct = get_smallest_neighbor_dir(_maze->_this_map[x][y]);
         move(_maze, &x, &y, &direct);
-        if (!check_for_smallest_neighbors)
+        _maze->_this_map[x][y] = set_wall(_maze->_this_map[x][y], direct);
+        if (!check_for_smallest_neighbors(_maze->_this_map[x][y]))
         {
             _queue = addQ(_maze->_this_map[x][y], _queue);
             _maze = floodfill(_maze, &_queue);
