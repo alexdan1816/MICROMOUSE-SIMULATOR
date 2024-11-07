@@ -3,12 +3,32 @@
 #include <stdlib.h>
 #include "API.h"
 #include "maze.h"
-
+// hàm hiển thị queue
 void logmess(char *text)
 {
     fprintf(stderr, "%s\n", text);
     fflush(stderr);
 }
+void log_queue_contents(queue *_this_queue)
+{
+    if (_this_queue->top == -1)
+    {
+        logmess("Queue is empty.");
+        return;
+    }
+
+    char buffer[BUFFER_SIZE];
+    snprintf(buffer, BUFFER_SIZE, "Queue has %d elements:", _this_queue->top + 1);
+    logmess(buffer);
+
+    for (int i = 0; i <= _this_queue->top; i++)
+    {
+        Node *node = _this_queue->_queue[i];
+        snprintf(buffer, BUFFER_SIZE, "Element %d -> x: %d, y: %d, value: %d", i, node->x, node->y, node->value);
+        logmess(buffer);
+    }
+}
+
 // functions for node
 Node *createNode(const short x, const short y, const int value)
 {
@@ -21,6 +41,10 @@ Node *createNode(const short x, const short y, const int value)
     _newNode->left = NULL;
     _newNode->right = NULL;
     _newNode->up = NULL;
+    _newNode->wallup = FALSE;
+    _newNode->walldown = FALSE;
+    _newNode->wallright = FALSE;
+    _newNode->wallleft = FALSE;
     return _newNode;
 }
 void deleteNode(Node **_this_node)
@@ -82,23 +106,16 @@ maze *maze_init(maze *_maze)
             _maze->_this_map[i][j]->right = (i < MAZESIZE - 1) ? _maze->_this_map[i + 1][j] : NULL;
         }
     }
-
-    // Xử lý các góc và cạnh của mê cung
-    _maze->_this_map[0][0]->left = NULL; // Góc dưới trái
-    _maze->_this_map[0][0]->down = NULL;
-    _maze->_this_map[0][MAZESIZE - 1]->left = NULL; // Góc trên trái
-    _maze->_this_map[0][MAZESIZE - 1]->up = NULL;
-    _maze->_this_map[MAZESIZE - 1][0]->right = NULL; // Góc dưới phải
-    _maze->_this_map[MAZESIZE - 1][0]->down = NULL;
-    _maze->_this_map[MAZESIZE - 1][MAZESIZE - 1]->right = NULL; // Góc trên phải
-    _maze->_this_map[MAZESIZE - 1][MAZESIZE - 1]->up = NULL;
-
-    for (short i = 1; i < MAZESIZE - 1; i++)
+    for (int i = 0; i < MAZESIZE; i++)
     {
-        _maze->_this_map[i][0]->down = NULL;             // Cạnh dưới
-        _maze->_this_map[i][MAZESIZE - 1]->up = NULL;    // Cạnh trên
-        _maze->_this_map[0][i]->left = NULL;             // Cạnh trái
-        _maze->_this_map[MAZESIZE - 1][i]->right = NULL; // Cạnh phải
+        _maze->_this_map[0][i]->wallleft = TRUE;
+        API_setWall(0, i, 'w');
+        _maze->_this_map[MAZESIZE - 1][i]->wallright = TRUE;
+        API_setWall(MAZESIZE - 1, i, 'e');
+        _maze->_this_map[i][MAZESIZE - 1]->wallup = TRUE;
+        API_setWall(i, MAZESIZE - 1, 'n');
+        _maze->_this_map[i][0]->wallright = TRUE;
+        API_setWall(i, 0, 's');
     }
 
     // Hiển thị giá trị của mỗi ô lên màn hình mê cung
@@ -106,34 +123,11 @@ maze *maze_init(maze *_maze)
     {
         for (short j = 0; j < MAZESIZE; j++)
         {
-            char text[BUFFER_SIZE];
-            snprintf(text, BUFFER_SIZE, "%d", _maze->_this_map[i][j]->value);
-            API_setText(i, j, text); // Hiển thị giá trị lên ô
+            API_setNumber(i, j, _maze->_this_map[i][j]->value);
         }
     }
 
     return _maze;
-}
-maze *flood_value(Node **_this_node, maze *_this_maze)
-{
-    if (*_this_node == NULL || _this_maze == NULL)
-    {
-        logmess("Error: Null pointer in flood_value.");
-        return _this_maze;
-    }
-
-    short x = (*_this_node)->x;
-    short y = (*_this_node)->y;
-
-    _this_maze->_this_map[x][y]->value = get_smallest_neighbor_value(*_this_node) + 1;
-    (*_this_node)->value = _this_maze->_this_map[x][y]->value;
-
-    char text[BUFFER_SIZE];
-    snprintf(text, BUFFER_SIZE, "%d", _this_maze->_this_map[x][y]->value);
-    API_setText(x, y, text); // Hiển thị giá trị lên ô
-    logmess("done changing value");
-
-    return _this_maze;
 }
 void set_visited(Node **_this_cell)
 {
@@ -141,24 +135,24 @@ void set_visited(Node **_this_cell)
     (*_this_cell)->visited = 1;
     return;
 }
-Node *set_wall(Node *_this_cell, const short direct)
+void set_wall(Node *_this_cell, const short direct)
 {
     if (direct == NORTH)
     {
         if (API_wallFront())
         {
             API_setWall(_this_cell->x, _this_cell->y, 'n');
-            _this_cell->up = NULL;
+            _this_cell->wallup = TRUE;
         }
         if (API_wallLeft())
         {
             API_setWall(_this_cell->x, _this_cell->y, 'w');
-            _this_cell->left = NULL;
+            _this_cell->wallleft = TRUE;
         }
         if (API_wallRight())
         {
             API_setWall(_this_cell->x, _this_cell->y, 'e');
-            _this_cell->right = NULL;
+            _this_cell->wallright = TRUE;
         }
     }
     if (direct == EAST)
@@ -166,17 +160,17 @@ Node *set_wall(Node *_this_cell, const short direct)
         if (API_wallFront())
         {
             API_setWall(_this_cell->x, _this_cell->y, 'e');
-            _this_cell->right = NULL;
+            _this_cell->wallright = TRUE;
         }
         if (API_wallLeft())
         {
             API_setWall(_this_cell->x, _this_cell->y, 'n');
-            _this_cell->up = NULL;
+            _this_cell->wallup = TRUE;
         }
         if (API_wallRight())
         {
             API_setWall(_this_cell->x, _this_cell->y, 's');
-            _this_cell->down = NULL;
+            _this_cell->walldown = TRUE;
         }
     }
     if (direct == SOUTH)
@@ -184,17 +178,17 @@ Node *set_wall(Node *_this_cell, const short direct)
         if (API_wallFront())
         {
             API_setWall(_this_cell->x, _this_cell->y, 's');
-            _this_cell->down = NULL;
+            _this_cell->walldown = TRUE;
         }
         if (API_wallLeft())
         {
             API_setWall(_this_cell->x, _this_cell->y, 'e');
-            _this_cell->right = NULL;
+            _this_cell->wallright = TRUE;
         }
         if (API_wallRight())
         {
             API_setWall(_this_cell->x, _this_cell->y, 'w');
-            _this_cell->left = NULL;
+            _this_cell->wallleft = TRUE;
         }
     }
     if (direct == WEST)
@@ -202,20 +196,19 @@ Node *set_wall(Node *_this_cell, const short direct)
         if (API_wallFront())
         {
             API_setWall(_this_cell->x, _this_cell->y, 'w');
-            _this_cell->left = NULL;
+            _this_cell->wallleft = TRUE;
         }
         if (API_wallLeft())
         {
             API_setWall(_this_cell->x, _this_cell->y, 's');
-            _this_cell->down = NULL;
+            _this_cell->walldown = TRUE;
         }
         if (API_wallRight())
         {
             API_setWall(_this_cell->x, _this_cell->y, 'n');
-            _this_cell->up = NULL;
+            _this_cell->wallup = TRUE;
         }
     }
-    return _this_cell;
 }
 
 // function for queue
@@ -229,176 +222,124 @@ bool isEmpty(queue *_this_queue)
 {
     if (_this_queue->top == -1)
     {
-        logmess("queue is empty");
         return true;
     }
     else
     {
-        logmess("queue is not empty");
         return false;
     }
 }
 queue *addQ(Node *_this_cell, queue *_this_queue)
 {
-    if (_this_cell->value == 0)
+    if (_this_cell->value == 0 || is_in_queue(_this_queue, _this_cell))
     {
         return _this_queue;
     }
     _this_queue->top++;
     _this_queue->_queue[_this_queue->top] = _this_cell;
-    logmess("add this cell to queue");
     return _this_queue;
 }
-Node *popQ(queue **_this_queue)
+Node *popQ(queue *_this_queue)
 {
-    if ((*_this_queue)->top == -1) // Kiểm tra nếu hàng đợi trống
+    if (_this_queue->top == -1) // Kiểm tra nếu hàng đợi trống
     {
         logmess("Error: Attempting to pop from an empty queue.");
         return NULL;
     }
-    (*_this_queue)->top--;
-    return (*_this_queue)->_queue[(*_this_queue)->top + 1];
+    _this_queue->top--;
+    return _this_queue->_queue[_this_queue->top + 1];
 }
-queue *add_all_neighbors(Node *_this_node, queue *_this_queue)
+queue *add_all_neighbors(Node *_this_node, queue *_this_queue, maze *_maze)
 {
     // Kiểm tra nếu ô nằm ở cạnh phải
-    if (_this_node->x == MAZESIZE - 1)
+    short x = _this_node->x;
+    short y = _this_node->y;
+    if (_this_node->right != NULL && _this_node->right->value != 0)
     {
-        if (_this_node->y == MAZESIZE - 1) // Góc trên phải
+        if (!check_for_smallest_neighbors(_this_node->right))
         {
-            if (_this_node->down != NULL)
-                _this_queue = addQ(_this_node->down, _this_queue);
-            if (_this_node->left != NULL)
-                _this_queue = addQ(_this_node->left, _this_queue);
-        }
-        else if (_this_node->y == 0) // Góc dưới phải
-        {
-            if (_this_node->up != NULL)
-                _this_queue = addQ(_this_node->up, _this_queue);
-            if (_this_node->left != NULL)
-                _this_queue = addQ(_this_node->left, _this_queue);
-        }
-        else // Cạnh phải (không nằm ở góc)
-        {
-            if (_this_node->up != NULL)
-                _this_queue = addQ(_this_node->up, _this_queue);
-            if (_this_node->down != NULL)
-                _this_queue = addQ(_this_node->down, _this_queue);
-            if (_this_node->left != NULL)
-                _this_queue = addQ(_this_node->left, _this_queue);
-        }
-    }
-    // Kiểm tra nếu ô nằm ở cạnh trái
-    else if (_this_node->x == 0)
-    {
-        if (_this_node->y == MAZESIZE - 1) // Góc trên trái
-        {
-            if (_this_node->down != NULL)
-                _this_queue = addQ(_this_node->down, _this_queue);
-            if (_this_node->right != NULL)
-                _this_queue = addQ(_this_node->right, _this_queue);
-        }
-        else if (_this_node->y == 0) // Góc dưới trái
-        {
-            if (_this_node->up != NULL)
-                _this_queue = addQ(_this_node->up, _this_queue);
-            if (_this_node->right != NULL)
-                _this_queue = addQ(_this_node->right, _this_queue);
-        }
-        else // Cạnh trái (không nằm ở góc)
-        {
-            if (_this_node->up != NULL)
-                _this_queue = addQ(_this_node->up, _this_queue);
-            if (_this_node->down != NULL)
-                _this_queue = addQ(_this_node->down, _this_queue);
-            if (_this_node->right != NULL)
-                _this_queue = addQ(_this_node->right, _this_queue);
-        }
-    }
-    // Kiểm tra nếu ô nằm ở cạnh trên (không phải góc)
-    else if (_this_node->y == MAZESIZE - 1)
-    {
-        if (_this_node->left != NULL)
-            _this_queue = addQ(_this_node->left, _this_queue);
-        if (_this_node->down != NULL)
-            _this_queue = addQ(_this_node->down, _this_queue);
-        if (_this_node->right != NULL)
             _this_queue = addQ(_this_node->right, _this_queue);
+        }
     }
-    // Kiểm tra nếu ô nằm ở cạnh dưới (không phải góc)
-    else if (_this_node->y == 0)
+    if (_this_node->left != NULL && _this_node->left->value != 0)
     {
-        if (_this_node->left != NULL)
+        if (!check_for_smallest_neighbors(_this_node->left))
+        {
             _this_queue = addQ(_this_node->left, _this_queue);
-        if (_this_node->up != NULL)
+        }
+    }
+    if (_this_node->up != NULL && _this_node->up->value != 0)
+    {
+        if (!check_for_smallest_neighbors(_this_node->up))
+        {
             _this_queue = addQ(_this_node->up, _this_queue);
-        if (_this_node->right != NULL)
-            _this_queue = addQ(_this_node->right, _this_queue);
+        }
     }
-    else // Trường hợp ô nằm bên trong mê cung (không nằm ở cạnh hay góc)
+    if (_this_node->down != NULL && _this_node->down->value != 0)
     {
-        if (_this_node->up != NULL)
-            _this_queue = addQ(_this_node->up, _this_queue);
-        if (_this_node->down != NULL)
+        if (!check_for_smallest_neighbors(_this_node->down))
+        {
             _this_queue = addQ(_this_node->down, _this_queue);
-        if (_this_node->left != NULL)
-            _this_queue = addQ(_this_node->left, _this_queue);
-        if (_this_node->right != NULL)
-            _this_queue = addQ(_this_node->right, _this_queue);
+        }
     }
-    logmess("done adding neighbors");
     return _this_queue;
+}
+bool is_in_queue(queue *_this_queue, Node *_this_cell)
+{
+    for (int i = 0; i <= _this_queue->top; i++)
+    {
+        if (_this_queue->_queue[i] == _this_cell)
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 bool check_for_smallest_neighbors(Node *_this_cell)
 {
     int current_value = _this_cell->value;
-    // check up
-    if (_this_cell->up != NULL && _this_cell->up->down != NULL && _this_cell->up->value + 1 == current_value)
+    // Kiểm tra ô phía Bắc
+    if (_this_cell->up != NULL && _this_cell->wallup == 0 && _this_cell->up->value + 1 == current_value)
     {
-        logmess("north cell detected");
         return true;
     }
-    // check down
-    if (_this_cell->down != NULL && _this_cell->down->up != NULL && _this_cell->down->value + 1 == current_value)
+    // Kiểm tra ô phía Nam
+    if (_this_cell->down != NULL && _this_cell->walldown == 0 && _this_cell->down->value + 1 == current_value)
     {
-        logmess("south cell detected");
         return true;
     }
-    // check right
-    if (_this_cell->right != NULL && _this_cell->right->left != NULL && _this_cell->right->value + 1 == current_value)
+    // Kiểm tra ô phía Đông
+    if (_this_cell->right != NULL && _this_cell->wallright == 0 && _this_cell->right->value + 1 == current_value)
     {
-        logmess("right cell detected");
         return true;
     }
-    // check left
-    if (_this_cell->left != NULL && _this_cell->left->right != NULL && _this_cell->left->value + 1 == current_value)
+    // Kiểm tra ô phía Tây
+    if (_this_cell->left != NULL && _this_cell->wallleft == 0 && _this_cell->left->value + 1 == current_value)
     {
-        logmess("left cell detected");
         return true;
     }
-    logmess("smallest cell non detected");
     return false;
 }
 int get_smallest_neighbor_value(Node *_this_cell)
 {
     int min = HIGHESTVAL;
-    if (_this_cell->up != NULL && _this_cell->up->down != NULL && _this_cell->up->value < min)
+    if (_this_cell->up != NULL && _this_cell->wallup == 0 && _this_cell->up->value < min)
     {
         min = _this_cell->up->value;
     }
     // check down
-    if (_this_cell->down != NULL && _this_cell->down->up != NULL && _this_cell->down->value < min)
+    if (_this_cell->down != NULL && _this_cell->walldown == 0 && _this_cell->down->value < min)
     {
         min = _this_cell->down->value;
     }
     // check right
-    if (_this_cell->right != NULL && _this_cell->right->left != NULL && _this_cell->right->value < min)
+    if (_this_cell->right != NULL && _this_cell->wallright == 0 && _this_cell->right->value < min)
     {
         min = _this_cell->right->value;
     }
     // check left
-    if (_this_cell->left != NULL && _this_cell->left->right != NULL && _this_cell->left->value < min)
+    if (_this_cell->left != NULL && _this_cell->wallleft == 0 && _this_cell->left->value < min)
     {
         min = _this_cell->left->value;
     }
@@ -407,30 +348,44 @@ int get_smallest_neighbor_value(Node *_this_cell)
 short get_smallest_neighbor_dir(Node *_this_cell)
 {
     int min = get_smallest_neighbor_value(_this_cell);
-    // NORTH CELL
-    if (_this_cell->up != NULL && _this_cell->up->value == min)
+    // EAST CELL
+    if (_this_cell->right != NULL && _this_cell->wallright == 0 && _this_cell->right->value == min)
     {
-        logmess("North way");
+        return EAST;
+    }
+    // NORTH CELL
+    if (_this_cell->up != NULL && _this_cell->wallup == 0 && _this_cell->up->value == min)
+    {
         return NORTH;
     }
     // SOUTH CELL
-    if (_this_cell->down != NULL && _this_cell->down->value == min)
+    if (_this_cell->down != NULL && _this_cell->walldown == 0 && _this_cell->down->value == min)
     {
-        logmess("South way");
         return SOUTH;
     }
-    // EAST CELL
-    if (_this_cell->right != NULL && _this_cell->right->value == min)
-    {
-        logmess("Right way");
-        return EAST;
-    }
     // WEST CELL
-    if (_this_cell->left != NULL && _this_cell->left->value == min)
+    if (_this_cell->left != NULL && _this_cell->wallleft == 0 && _this_cell->left->value == min)
     {
-        logmess("Left way");
         return WEST;
     }
 
     return -1;
+}
+
+maze *floodfill(maze *_maze, queue *_queue)
+{
+    while (!isEmpty(_queue))
+    {
+        Node *_this_node = popQ(_queue);
+        if (!check_for_smallest_neighbors(_this_node))
+        {
+            short x = _this_node->x;
+            short y = _this_node->y;
+            logmess("floodfilling");
+            _maze->_this_map[x][y]->value = get_smallest_neighbor_value(_this_node) + 1;
+            API_setNumber(x, y, _maze->_this_map[x][y]->value);
+            _queue = add_all_neighbors(_this_node, _queue, _maze);
+        }
+    }
+    return _maze;
 }

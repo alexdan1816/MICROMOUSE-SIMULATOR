@@ -11,12 +11,13 @@
 #define Xstart 0
 #define Ystart 0
 
-#define QSIZE 80
-#define BUFFER_SIZE 4
+#define QSIZE 128
+#define BUFFER_SIZE 128
 
 #define HIGHESTVAL 255
+#define TRUE 1
+#define FALSE 0
 
-void logmess(char *text);
 // define the nodes stand for maze cells
 typedef struct Node
 {
@@ -24,6 +25,7 @@ typedef struct Node
     short y;
     int value;
     int visited;
+    short wallup, walldown, wallleft, wallright;
 
     struct Node *up;
     struct Node *down;
@@ -41,11 +43,9 @@ typedef struct maze
 } maze;
 // functions for maze
 maze *maze_init(maze *_maze);
-maze *flood_value(Node **_this_node, maze *_this_maze);
+// maze *flood_value(Node *_this_node, maze *_this_maze);
 void set_visited(Node **_this_cell);
-Node *set_wall(Node *_this_cell, const short direct);
-// bool accessible_neighbor_check(Node *_this_cell, int current_value);
-// int min_value_check(Node *_this_cell);
+void set_wall(Node *_this_cell, const short direct);
 
 // define the queue for floodfill
 typedef struct queue
@@ -56,18 +56,17 @@ typedef struct queue
 // functions for queue
 queue *initQ();
 queue *addQ(Node *_this_cell, queue *_this_queue);
-Node *popQ(queue **_this_queue);
+Node *popQ(queue *_this_queue);
 bool isEmpty(queue *_this_queue);
-queue *add_all_neighbors(Node *_this_node, queue *_this_queue);
+queue *add_all_neighbors(Node *_this_node, queue *_this_queue, maze *_maze);
+bool is_in_queue(queue *_this_queue, Node *_this_cell);
 
-// floodfill assisting functions
-// bool accessible_neighbor_check(Node *_this_cell, int current_value);
-// int min_value_take(Node *_this_cell);
-// bool lower_neighbor_check(Node *_this_cell, int current_value);
-// void logmess(char *text);
-// queue *add_neighbors(Node *_this_Cell, queue *_this_queue);
 bool check_for_smallest_neighbors(Node *_this_cell);
 int get_smallest_neighbor_value(Node *_this_cell);
 short get_smallest_neighbor_dir(Node *_this_cell);
 
+void logmess(char *text);
+void log_queue_contents(queue *_this_queue);
+
+maze *floodfill(maze *_maze, queue *_queue);
 #endif // MAZE_H;
