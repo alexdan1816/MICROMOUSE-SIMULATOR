@@ -1,5 +1,16 @@
 {
   "files.associations": {
-    "DFS.C": "cpp"
+    "DFS.C": "cpp",
+    "cmath": "c",
+    "maze.h": "c",
+    "stdio.h": "c",
+    "stdbool.h": "c",
+    "stdlib.h": "c",
+    "chrono": "c",
+    "random": "c",
+    "limits": "c",
+    "api.h": "c",
+    "astarlib.h": "c",
+    "libforas.h": "c"
   }
 }
